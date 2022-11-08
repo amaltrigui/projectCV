@@ -32,6 +32,8 @@ def main(args):
     - TestTubeLogger is implemented class in pytorchLightening -> returns Logger
     - create_trainer: returns a Trainer (which is a class of pytorchlightning) 
       Question: why not simply say: trainer = Trainer (..)?
+    - then initialize model from class UnetMRIModel
+    - run trainer.fit() : pytorchlightning command
        
     """
     if args.mode == 'train':

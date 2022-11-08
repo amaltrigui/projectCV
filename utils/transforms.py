@@ -3,11 +3,12 @@ Copyright (c) Facebook, Inc. and its affiliates.
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
+from typing import Dict, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 
-
+# FastMRI Facebook functions
 def to_tensor(data):
     """
     Convert numpy array to PyTorch tensor. For complex arrays, the real and imaginary parts
@@ -20,6 +21,16 @@ def to_tensor(data):
     if np.iscomplexobj(data):
         data = np.stack((data.real, data.imag), axis=-1)
     return torch.from_numpy(data)
+
+def tensor_to_complex_np(data: torch.Tensor) -> np.ndarray:
+    """
+    Converts a complex torch tensor to numpy array.
+    Args:
+        data: Input data to be converted to numpy.
+    Returns:
+        Complex numpy version of data.
+    """
+    return torch.view_as_complex(data).numpy()
 
 
 def apply_mask(data, mask_func, seed=None, padding=None):
@@ -49,7 +60,14 @@ def apply_mask(data, mask_func, seed=None, padding=None):
 
 
 def mask_center(x, mask_from, mask_to):
-    b, c, h, w, two = x.shape
+    """
+    Initializes a mask with the center filled in.
+    Args:
+        mask_from: Part of center to start filling.
+        mask_to: Part of center to end filling.
+    Returns:
+        A mask with the center filled.
+    """
     mask = torch.zeros_like(x)
     mask[:, :, :, mask_from:mask_to] = x[:, :, :, mask_from:mask_to]
     return mask
@@ -229,11 +247,16 @@ def normalize_instance(data, eps=0.):
     return normalize(data, mean, std, eps), mean, std
 
 
-# Helper functions
+# extra functions
 
 def roll(x, shift, dim):
     """
     Similar to np.roll but applies to PyTorch Tensors
+    np.roll : Roll array elements along a given axis.
+              Elements that roll beyond the last position are re-introduced at the first.
+              example: array([[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]])
+                       np.roll(x2, 1)
+                       array([[9, 0, 1, 2, 3], [4, 5, 6, 7, 8]])
     """
     if isinstance(shift, (tuple, list)):
         assert len(shift) == len(dim)
@@ -251,6 +274,15 @@ def roll(x, shift, dim):
 def fftshift(x, dim=None):
     """
     Similar to np.fft.fftshift but applies to PyTorch Tensors
+    x: pytorch Tensor
+    np.fft.fftshift : Shift the zero-frequency component to the center of the spectrum.
+    example : freqs= array([[ 0.,  1.,  2.],
+                           [ 3.,  4., -4.],
+                           [-3., -2., -1.]])
+                np.fft.fftshift(freqs, axes=(1,))
+                array([[ 2.,  0.,  1.],
+                       [-4.,  3.,  4.],
+                       [-1., -3., -2.]])
     """
     if dim is None:
         dim = tuple(range(x.dim()))
@@ -265,6 +297,7 @@ def fftshift(x, dim=None):
 def ifftshift(x, dim=None):
     """
     Similar to np.fft.ifftshift but applies to PyTorch Tensors
+    np.fft.ifftshift: The inverse of fftshift. Although identical for even-length x, the functions differ by one sample for odd-length x.
     """
     if dim is None:
         dim = tuple(range(x.dim()))

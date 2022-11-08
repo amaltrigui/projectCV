@@ -73,3 +73,9 @@ class fastMRIDataModel(pl.LightningModule):
   @pl.data_loader
   def test_dataloader(self):
     return self._create_data_loader(self.test_data_transform(), data_partition='test', sample_rate=1.)
+
+  
+  def _visualize():
+  def validation_end():
+  def test_end():
+    

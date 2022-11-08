@@ -56,6 +56,11 @@ if __name__ == '__main__':
     
     # add the predifined hyperparamaetrs of UnetMRIModel to the parser
     # note: if you want to change them as well, we may wanna write them here in parser.add_argument()
+    
+    parser.add_argument ('--traindatapath')
+    parser.add_argument ('--valdatapath')
+    parser.add_argument ('--testdatapath')
+    
     parser = UnetMRIModel.add_model_specific_args(parser)
     args = parser.parse_args()
     random.seed(args.seed)

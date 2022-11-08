@@ -49,7 +49,7 @@ def l1(target, output):
 
 
 class Metrics:
-    """
+    """git 
     Maintains running statistics for a given collection of metrics.
     """
 
@@ -85,7 +85,10 @@ class Metrics:
             metric: stat.stddev() for metric, stat in self.metric_stats.items()
         }
 
-def evaluate(args, recons_key):
+
+
+#still have to see if we need this
+def evaluate(args):
     metric_funcs = dict(
         MSE=mse,
         NMSE=nmse,
@@ -97,10 +100,7 @@ def evaluate(args, recons_key):
     for tgt_file in args.target_path.iterdir():  #iterate over paths of the content of the directory
         # open the target image and the correspondint reconstructed image 
         with h5py.File(tgt_file) as target, h5py.File(args.predictions_path / tgt_file.name) as output:  
-          #don't use those target images
-            if args.acquisition and args.acquisition != target.attrs['acquisition']:
-                continue
-            target = target[recons_key].value  #multi or single coil-->recons_key
+            target = target['reconstruction_esc'].value  
             output = output['reconstruction'].value
             metrics.push(target, output) 
     return metrics
@@ -112,13 +112,9 @@ if __name__ == '__main__':
                         help='Path to the ground truth data')
     parser.add_argument('--predictions-path', type=pathlib.Path, required=True,
                         help='Path to reconstructions')
-    parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
-                        help='Which challenge')
-    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK'], default=None,
-                        help='If set, only volumes of the specified acquisition type are used '
-                             'for evaluation. By default, all volumes are included.')
+   
+    
     args = parser.parse_args()
 
-    recons_key = 'reconstruction_rss' if args.challenge == 'multicoil' else 'reconstruction_esc'
-    metrics = evaluate(args, recons_key)
+    metrics = evaluate(args)
     print(metrics)

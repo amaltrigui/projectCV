@@ -30,9 +30,9 @@ class fastMRIDataModel(pl.LightningModule):
     """
     """
     sample_rate = sample_rate or self.hparams.sample_rate
-    if data_partition = 'train':
+    if data_partition == 'train':
       datapath = self.hparams.traindata_path
-    elif data_partition = 'val' :
+    elif data_partition == 'val' :
       datapath = self.hparams.valdata_path
     else:
       datapath = self.hparams.testdata_path
@@ -53,3 +53,23 @@ class fastMRIDataModel(pl.LightningModule):
       sampler = sampler
     )
   
+  def train_data_transform(self):
+    raise NotImplementedError
+    
+  @pl.data_loader
+  def train_dataloader(self):
+    return self._create_data_loader(self.train_data_transform(), data_partition='train')
+  
+  def val_data_transform(self):
+    raise NotImplementedError
+
+  @pl.data_loader
+  def val_dataloader(self):
+    return self._create_data_loader(self.val_data_transform(), data_partition='val')
+  
+  def test_data_transform(self):
+    raise NotImplementedError
+
+  @pl.data_loader
+  def test_dataloader(self):
+    return self._create_data_loader(self.test_data_transform(), data_partition='test', sample_rate=1.)

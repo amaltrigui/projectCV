@@ -45,14 +45,8 @@ def l1(target, output):
     return np.mean(np.abs(target-output))
 
 
-METRIC_FUNCS = dict(
-    MSE=mse,
-    NMSE=nmse,
-    PSNR=psnr,
-    SSIM=ssim,
-    L1=l1, 
-    
-)
+
+
 
 class Metrics:
     """
@@ -60,28 +54,71 @@ class Metrics:
     """
 
     def __init__(self, metric_funcs):
-        self.metrics = {
+        ''' create a Statisitc object for each metric function: 
+        a dict with keys=keys of the metric_funcs and values=the Statisitc objects
+        metric_funcs = dict(
+        MSE=mse,
+        NMSE=nmse,
+        PSNR=psnr,
+        SSIM=ssim,
+        L1=l1,               )'''
+        self.metric_stats= {
             metric: Statistics() for metric in metric_funcs
         }
+        self.metric_funcs= metric_funcs 
 
-    def push(self, target, recons):
-        for metric, func in METRIC_FUNCS.items():
-            self.metrics[metric].push(func(target, recons))
+    def push(self, target, output):
+        ''' add the loss value computed with the given target and output
+         values to the corresponding metric statistic object  '''
+        for metric, func in self.metric_funcs.items():
+            self.metric_stats[metric].push(func(target, output))
 
     def means(self):
+        ''' store the mean values of different losses '''
         return {
-            metric: stat.mean() for metric, stat in self.metrics.items()
+            metric: stat.mean() for metric, stat in self.metric_stats.items()
         }
 
     def stddevs(self):
+        ''' store the standard deviations of different losses '''
         return {
-            metric: stat.stddev() for metric, stat in self.metrics.items()
+            metric: stat.stddev() for metric, stat in self.metric_stats.items()
         }
 
-    def __repr__(self):
-        means = self.means()
-        stddevs = self.stddevs()
-        metric_names = sorted(list(means))
-        return ' '.join(
-            f'{name} = {means[name]:.4g} +/- {2 * stddevs[name]:.4g}' for name in metric_names
-        )
+def evaluate(args, recons_key):
+    metric_funcs = dict(
+        MSE=mse,
+        NMSE=nmse,
+        PSNR=psnr,
+        SSIM=ssim,
+        L1=l1,               )
+    metrics = Metrics(metric_funcs)    
+
+    for tgt_file in args.target_path.iterdir():  #iterate over paths of the content of the directory
+        # open the target image and the correspondint reconstructed image 
+        with h5py.File(tgt_file) as target, h5py.File(args.predictions_path / tgt_file.name) as output:  
+          #don't use those target images
+            if args.acquisition and args.acquisition != target.attrs['acquisition']:
+                continue
+            target = target[recons_key].value  #multi or single coil-->recons_key
+            output = output['reconstruction'].value
+            metrics.push(target, output) 
+    return metrics
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--target-path', type=pathlib.Path, required=True,
+                        help='Path to the ground truth data')
+    parser.add_argument('--predictions-path', type=pathlib.Path, required=True,
+                        help='Path to reconstructions')
+    parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
+                        help='Which challenge')
+    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK'], default=None,
+                        help='If set, only volumes of the specified acquisition type are used '
+                             'for evaluation. By default, all volumes are included.')
+    args = parser.parse_args()
+
+    recons_key = 'reconstruction_rss' if args.challenge == 'multicoil' else 'reconstruction_esc'
+    metrics = evaluate(args, recons_key)
+    print(metrics)
